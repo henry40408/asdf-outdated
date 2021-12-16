@@ -7,12 +7,13 @@ import threading
 from optparse import OptionParser
 
 ignore_patterns = {
-    'consul': lambda v: any([needle in v for needle in ['-alpha', '-beta', '-rc', '+ent']]),
-    'python': lambda v: not re.match('^\d', v) or any([needle in v for needle in ['a', 'b', 'dev', 'rc']]),
-    'golang': lambda v: any([needle in v for needle in ['beta', 'rc']]),
-    'kubectl': lambda v: any([needle in v for needle in ['alpha', 'rc']]),
-    'ruby': lambda v: not re.match('^\d', v) or any([needle in v for needle in ['-dev']]),
-    'tmux': lambda v: 'rc' in v,
+    'consul': lambda v: re.search(r'-(alpha|beta|rc|)|\+ent', v),
+    'flutter': lambda v: re.search(r'-dev|pre', v),
+    'golang': lambda v: re.search(r'beta|rc', v),
+    'kubectl': lambda v: re.search(r'alpha|rc', v),
+    'python': lambda v: not re.match(r'^\d', v) or re.search(r'a|b|dev|rc', v),
+    'ruby': lambda v: not re.match(r'^\d', v) or re.search(r'-dev', v),
+    'tmux': lambda v: re.search(r'rc', v),
 }
 
 class bcolors:
