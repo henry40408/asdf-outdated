@@ -12,7 +12,7 @@ ignore_patterns = {
     'golang': lambda v: re.search(r'beta|rc', v),
     'kubectl': lambda v: re.search(r'alpha|rc', v),
     'python': lambda v: not re.match(r'^\d', v) or re.search(r'a|b|dev|rc', v),
-    'ruby': lambda v: not re.match(r'^\d', v) or re.search(r'-dev', v),
+    'ruby': lambda v: not re.match(r'^\d', v) or re.search(r'-dev|-preview', v),
     'tmux': lambda v: re.search(r'rc', v),
 }
 
