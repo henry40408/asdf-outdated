@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 import threading
+import datetime
+
 from optparse import OptionParser
 
 ignore_patterns = {
@@ -27,6 +29,8 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+verbose = False
+
 def read_tool_versions():
     tuples = []
     with open(os.path.expanduser('~/.tool-versions')) as f:
@@ -36,38 +40,52 @@ def read_tool_versions():
             tuples.append((plugin, versions))
     return tuples
 
+def print_verbose(*args):
+    global verbose
+    if verbose:
+        print(f'{datetime.datetime.now().isoformat()} {"".join(args)}')
+
 def check_version(options, plugin, versions):
-    if options.verbose:
-        print('==> [-] checking {}'.format(plugin))
+    print_verbose(f'check {plugin}')
 
     sp = subprocess.Popen(['asdf', 'list', 'all', plugin], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, _stderr = sp.communicate()
 
     newer_versions = [line.strip() for line in stdout.decode('utf-8').split('\n') if line.strip()]
+    print_verbose(f'{plugin}: found {newer_versions}')
 
     if plugin in ignore_patterns.keys():
-        f = ignore_patterns[plugin]
-        newer_versions = [v for v in newer_versions if not f(v)]
+        fn = ignore_patterns[plugin]
+
+        ignored = [v for v in newer_versions if fn(v)]
+        print_verbose(f'{plugin}: ignore {ignored}')
+
+        newer_versions = [v for v in newer_versions if v not in ignored]
+        print_verbose(f'{plugin}: preserve {newer_versions}')
 
     if not newer_versions:
-        print('{}: {}no latest version{}'.format(plugin, bcolors.WARNING, bcolors.ENDC))
+        print(f'{plugin}: {bcolors.WARNING}no latest version{bcolors.ENDC}')
         return
 
     latest_version = newer_versions[-1]
     if latest_version in versions:
-        print('{}: {}up-to-date{}'.format(plugin, bcolors.OKGREEN, bcolors.ENDC))
+        print(f'{plugin}: {bcolors.OKGREEN}up-to-date{bcolors.ENDC}')
     else:
-        print('{}: {}{} <- {}{}'.format(plugin, bcolors.FAIL, latest_version, ', '.join(versions), bcolors.ENDC))
-
-    if options.verbose:
-        print('==> [v] done checking {}'.format(plugin))
+        print(f'{plugin}: {bcolors.FAIL}{latest_version} <- {",".join(versions)}{bcolors.ENDC}')
 
 def main():
+    global verbose
+
     parser = OptionParser()
     parser.add_option('-v', '--verbose', help='Verbose', action='store_true')
     (options, args) = parser.parse_args()
 
+    if options.verbose:
+        verbose = True
+
     tuples = read_tool_versions()
+
+    # filter plugins if positional arguments are given
     if args:
         tuples = [t for t in tuples if t[0] in args]
 
