@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import logging
 import os
 import re
 import subprocess
@@ -29,8 +30,6 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
-verbose = False
-
 def read_tool_versions():
     tuples = []
     with open(os.path.expanduser('~/.tool-versions')) as f:
@@ -40,28 +39,23 @@ def read_tool_versions():
             tuples.append((plugin, versions))
     return tuples
 
-def print_verbose(*args):
-    global verbose
-    if verbose:
-        print(f'{datetime.datetime.now().isoformat()} {"".join(args)}')
-
 def check_version(options, plugin, versions):
-    print_verbose(f'check {plugin}')
+    logging.debug(f'check {plugin}')
 
     sp = subprocess.Popen(['asdf', 'list', 'all', plugin], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, _stderr = sp.communicate()
 
     newer_versions = [line.strip() for line in stdout.decode('utf-8').split('\n') if line.strip()]
-    print_verbose(f'{plugin}: found {newer_versions}')
+    logging.debug(f'{plugin}: found {newer_versions}')
 
     if plugin in ignore_patterns.keys():
         fn = ignore_patterns[plugin]
 
         ignored = [v for v in newer_versions if fn(v)]
-        print_verbose(f'{plugin}: ignore {ignored}')
+        logging.debug(f'{plugin}: ignore {ignored}')
 
         newer_versions = [v for v in newer_versions if v not in ignored]
-        print_verbose(f'{plugin}: preserve {newer_versions}')
+        logging.debug(f'{plugin}: preserve {newer_versions}')
 
     if not newer_versions:
         print(f'{plugin}: {bcolors.WARNING}no latest version{bcolors.ENDC}')
@@ -74,14 +68,12 @@ def check_version(options, plugin, versions):
         print(f'{plugin}: {bcolors.FAIL}{latest_version} <- {",".join(versions)}{bcolors.ENDC}')
 
 def main():
-    global verbose
-
     parser = OptionParser()
     parser.add_option('-v', '--verbose', help='Verbose', action='store_true')
     (options, args) = parser.parse_args()
 
     if options.verbose:
-        verbose = True
+        logging.basicConfig(level=logging.DEBUG)
 
     tuples = read_tool_versions()
 
